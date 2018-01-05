@@ -10,29 +10,29 @@ using UnityEngine;
 
 public class CSharpCallback
 {
-    [MonoPInvokeCallback(typeof(AddTwoNumbersDelegate))]
+    [MonoPInvokeCallback(typeof(ArithmeticOperationDelegate))]
     static int AddTwoNumbersInManagedCode(int a, int b)
     {
         return a + b;
     }
 
-    delegate int AddTwoNumbersDelegate(int a, int b);
+    delegate int ArithmeticOperationDelegate(int a, int b);
 
     [DllImport("__Internal")]
-    extern static int  AddTwoNumbersUsingInlineCallback(int a, int b, AddTwoNumbersDelegate callback);
+    extern static int  AddTwoNumbersUsingInlineCallback(int a, int b, ArithmeticOperationDelegate callback);
 
     [DllImport("__Internal")]
     extern static int MultiplyTwoNumbersUsingExportedFunction(int a, int b );
 
 
-    AddTwoNumbersDelegate lateBoundCallback;
+    ArithmeticOperationDelegate lateBoundCallback;
 
 
     [DllImport("__Internal")] 
-    extern static AddTwoNumbersDelegate GetLateBoundDivison ();
+    extern static ArithmeticOperationDelegate GetLateBoundDivison ();
 
     [DllImport("__Internal")]
-    extern static AddTwoNumbersDelegate GetLateBoundSubtraction ();
+    extern static ArithmeticOperationDelegate GetLateBoundSubtraction ();
 
 
     [DllImport("__Internal")]
@@ -42,7 +42,7 @@ public class CSharpCallback
     public static void CallChainFromManaged  (  int a, int b )
     {
 
-        AddTwoNumbersDelegate latebound; 
+        ArithmeticOperationDelegate latebound; 
         try
         {
             Debug.Log(string.Format("{0} + {1} = {2}", a, b, AddTwoNumbersUsingInlineCallback(a, b, AddTwoNumbersInManagedCode)));
@@ -55,33 +55,13 @@ public class CSharpCallback
             Debug.Log(string.Format("{0} was not found. If you are trying to use it in UNITY_EDITOR, use a plugin for this", eeh.Message));
         }
 
-
+        // One approach to late binding. This is safer on checks if your function is not guaranteed to exist.
         try
-        {
-            latebound = GetLateBoundSubtraction();
-            // if (latebound.Method != null)
-           // if ( latebound != null && latebound.Method != null )
-            {
-                Debug.Log(string.Format("{0} - {1} = {2}", a , b, latebound(a, b)));
-            }
-
-        } catch (Exception ex)
-        {
-            Debug.Log(ex.Message); 
-        }
-        
-         
-        try
-        {
-
-            //  ulong address = GetLateBoundSubtractionAddress(); 
-            // IntPtr lateboundSubtractionPtr = new IntPtr((long)address); 
-            // if ( address != 0 && lateboundSubtractionPtr !=  null  )
+        {             
             IntPtr lateboundSubtractionPtr = GetLateBoundSubtractionAddress();    
-            if ( lateboundSubtractionPtr != null )
-            {
-                //        var lateboundSubtraction = Marshal.GetDelegateForFunctionPointer<AddTwoNumbersDelegate>(lateboundSubtractionPtr); 
-                AddTwoNumbersDelegate lateboundSubtraction = Marshal.GetDelegateForFunctionPointer(lateboundSubtractionPtr, typeof(AddTwoNumbersDelegate)) as AddTwoNumbersDelegate; 
+            if ( lateboundSubtractionPtr != IntPtr.Zero )
+            {                 
+                ArithmeticOperationDelegate lateboundSubtraction = Marshal.GetDelegateForFunctionPointer(lateboundSubtractionPtr, typeof(ArithmeticOperationDelegate)) as ArithmeticOperationDelegate; 
                 if ( lateboundSubtraction != null )
                     Debug.Log(string.Format("{0} - {1} = {2}", a, b, lateboundSubtraction(a, b)));
             }
@@ -91,9 +71,8 @@ public class CSharpCallback
         catch  ( Exception ex )
         {             
             Debug.Log( ex.Message );
-        }
-                  
-    } 
+        }         
+    }
 
-    
+
 }

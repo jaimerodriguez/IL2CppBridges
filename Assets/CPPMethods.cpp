@@ -1,5 +1,5 @@
 ﻿
-typedef int(__stdcall* CallbackFunc)(int a, int b);
+typedef int(__stdcall* NativeArithmeticOperation)(int a, int b);
 extern "C"
 {
 	__declspec(dllexport) int __stdcall  MultiplyTwoNumbersExported(int a, int b)
@@ -7,17 +7,17 @@ extern "C"
 		return a*b;
 	}
 
-	static CallbackFunc divisionCallback = 0;
-	static CallbackFunc subtractionCallback = 0;
+	static NativeArithmeticOperation divisionCallback = 0;
+	static NativeArithmeticOperation subtractionCallback = 0;
 	// static unsigned long subtractionAddress = 0;
-	static void * subtractionAddress = 0;
+	static void* subtractionAddress = 0;
 
-	__declspec(dllexport) void __stdcall  SetLateBoundDivision(CallbackFunc division)
+	__declspec(dllexport) void __stdcall  SetLateBoundDivision(NativeArithmeticOperation division)
 	{
 		divisionCallback = division;
 	}
 
-	__declspec(dllexport) void __stdcall  SetLateBoundSubtraction(CallbackFunc operation)
+	__declspec(dllexport) void __stdcall  SetLateBoundSubtraction(NativeArithmeticOperation operation)
 	{
 		// subtractionAddress = (unsigned long)operation;
 		subtractionAddress = (void*)operation;
@@ -25,12 +25,12 @@ extern "C"
 	}
 
 
-	CallbackFunc GetLateBoundDivison()
+	NativeArithmeticOperation GetLateBoundDivison()
 	{
 		return divisionCallback;
 	}
 
-	CallbackFunc GetLateBoundSubtraction()
+	NativeArithmeticOperation GetLateBoundSubtraction()
 	{
 		return subtractionCallback;
 	}
@@ -42,7 +42,7 @@ extern "C"
 	}
 
 
-	int __stdcall AddTwoNumbersUsingInlineCallback(int a, int b, CallbackFunc callback)
+	int __stdcall AddTwoNumbersUsingInlineCallback(int a, int b, NativeArithmeticOperation callback)
 	{
 		return callback(a, b);
 	}
@@ -57,15 +57,21 @@ extern "C"
 
 	void App::Initialize(CoreApplicationView^ applicationView)
 	{
-	SetupOrientation();
-	m_AppCallbacks = ref new AppCallbacks();
-	m_AppCallbacks->SetCoreApplicationViewEvents(applicationView);
-	m_AppCallbacks->Initialized += ref new UnityPlayer::InitializedEventHandler(this, &IL2Sample::App::OnInitialized);
+		// These are there, just leave them alone 
+		SetupOrientation();
+		m_AppCallbacks = ref new AppCallbacks();
+		m_AppCallbacks->SetCoreApplicationViewEvents(applicationView);
 
-	applicationView->Activated += ref new TypedEventHandler<CoreApplicationView ^, IActivatedEventArgs^>(this, &App::OnActivated);
+
+		// This is the line to add
+		m_AppCallbacks->Initialized += ref new UnityPlayer::InitializedEventHandler(this, &IL2Sample::App::OnInitialized);
+
+		//This should already be there. 
+		applicationView->Activated += ref new TypedEventHandler<CoreApplicationView ^, IActivatedEventArgs^>(this, &App::OnActivated);
 	}
 
 
+	// Add all of the below too.. 
 
 	typedef int(__stdcall* CallbackFunc)(int a, int b);
 	extern "C" int __stdcall MultiplyTwoNumbersExported(int a, int b);
@@ -76,16 +82,24 @@ extern "C"
 	#include <string>
 	using namespace std;
 
-	extern "C" int __stdcall UnmanagedDivision( int a , int b )
+	extern "C" int __stdcall UnmanagedDivision(int a, int b)
 	{
+	if (b != 0)
 	return a / b;
+	else
+	return UINT32_MAX;
 	}
 
-	void IL2Sample::App::OnInitialized()
+	extern "C" int __stdcall UnmanagedSubtraction(int a, int b)
 	{
-	int result = MultiplyTwoNumbersExported( 3, 3);
+	return a - b;
+	}
+
+	void  App::OnInitialized()
+	{
+	int result = MultiplyTwoNumbersExported(3, 3);
 	SetLateBoundDivision(&UnmanagedDivision);
-	SetLateBoundSubtraction(&UnmanagedDivision);
+	SetLateBoundSubtraction(&UnmanagedSubtraction);
 	Platform::String ^resultMessage = L"3*3 = " + result;
 	::OutputDebugString(resultMessage->Data());
 
